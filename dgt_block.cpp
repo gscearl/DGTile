@@ -153,6 +153,26 @@ View<double***> Block::path_cons(int axis) const {
   return m_path_cons[axis];
 }
 
+View<double***> Block::noncon_avg1(int axis) const {
+  verify_axis(dim(), axis);
+  return m_noncon_avg1[axis];
+}
+
+View<double***> Block::noncon_avg2(int axis) const {
+  verify_axis(dim(), axis);
+  return m_noncon_avg2[axis];
+}
+
+View<double***> Block::noncon_flux1(int axis) const {
+  verify_axis(dim(), axis);
+  return m_noncon_flux1[axis];
+}
+
+View<double***> Block::noncon_flux2(int axis) const {
+  verify_axis(dim(), axis);
+  return m_noncon_flux2[axis];
+}
+
 View<double***> Block::resid() const {
   return m_resid;
 }
@@ -170,6 +190,26 @@ p3a::simd_view<double***> Block::simd_flux(int axis) const {
 p3a::simd_view<double***> Block::simd_path_cons(int axis) const {
   verify_axis(dim(), axis);
   return p3a::simd_view<double***>(m_path_cons[axis]);
+}
+
+p3a::simd_view<double***> Block::simd_noncon_avg1(int axis) const {
+  verify_axis(dim(), axis);
+  return p3a::simd_view<double***>(m_noncon_avg1[axis]);
+}
+
+p3a::simd_view<double***> Block::simd_noncon_avg2(int axis) const {
+  verify_axis(dim(), axis);
+  return p3a::simd_view<double***>(m_noncon_avg2[axis]);
+}
+
+p3a::simd_view<double***> Block::simd_noncon_flux1(int axis) const {
+  verify_axis(dim(), axis);
+  return p3a::simd_view<double***>(m_noncon_flux1[axis]);
+}
+
+p3a::simd_view<double***> Block::simd_noncon_flux2(int axis) const {
+  verify_axis(dim(), axis);
+  return p3a::simd_view<double***>(m_noncon_flux2[axis]);
 }
 
 p3a::simd_view<double***> Block::simd_resid() const {
@@ -242,6 +282,22 @@ static std::string path_cons_name(int i) {
   return "dgt::Block::m_path_cons[" + std::to_string(i) + "]";
 }
 
+static std::string noncon_avg1_name(int i) {
+  return "dgt::Block::m_noncon_avg1[" + std::to_string(i) + "]";
+}
+
+static std::string noncon_avg2_name(int i) {
+  return "dgt::Block::m_noncon_avg2[" + std::to_string(i) + "]";
+}
+
+static std::string noncon_flux1_name(int i) {
+  return "dgt::Block::m_noncon_flux1[" + std::to_string(i) + "]";
+}
+
+static std::string noncon_flux2_name(int i) {
+  return "dgt::Block::m_noncon_flux2[" + std::to_string(i) + "]";
+}
+
 void Block::allocate(int nsoln, int nmodal_eq, int nflux_eq) {
   CALI_CXX_MARK_FUNCTION;
   verify_basis(basis());
@@ -261,6 +317,22 @@ void Block::allocate(int nsoln, int nmodal_eq, int nflux_eq) {
  for (int axis = 0; axis < dim(); ++axis) {
     int const nsides = get_side_grid(cgrid, axis).size();
     m_path_cons[axis] = View<double***>(path_cons_name(axis), nsides, nside_pts, nflux_eq);
+  }
+ for (int axis = 0; axis < dim(); ++axis) {
+    int const nsides = get_side_grid(cgrid, axis).size();
+    m_noncon_avg1[axis] = View<double***>(noncon_avg1_name(axis), nsides, ndirs, nflux_eq);
+  }
+ for (int axis = 0; axis < dim(); ++axis) {
+    int const nsides = get_side_grid(cgrid, axis).size();
+    m_noncon_avg2[axis] = View<double***>(noncon_avg2_name(axis), nsides, ndirs, nflux_eq);
+  }
+ for (int axis = 0; axis < dim(); ++axis) {
+    int const nsides = get_side_grid(cgrid, axis).size();
+    m_noncon_flux1[axis] = View<double***>(noncon_flux1_name(axis), nsides, nside_pts, nflux_eq);
+  }
+ for (int axis = 0; axis < dim(); ++axis) {
+    int const nsides = get_side_grid(cgrid, axis).size();
+    m_noncon_flux2[axis] = View<double***>(noncon_flux2_name(axis), nsides, nside_pts, nflux_eq);
   }
   for (int axis = 0; axis < dim(); ++axis) {
     for (int dir = 0; dir < ndirs; ++dir) {

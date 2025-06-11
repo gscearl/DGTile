@@ -38,6 +38,10 @@ class Border {
     AMRBorderData m_amr[ndirs];
     View<double****> m_amr_flux;
     View<double****> m_amr_path_cons;
+    View<double****> m_amr_noncon_avg1;
+    View<double****> m_amr_noncon_avg2;
+    View<double****> m_amr_noncon_flux1;
+    View<double****> m_amr_noncon_flux2;
   public:
     Border() = default;
     [[nodiscard]] int axis() const;
@@ -49,9 +53,15 @@ class Border {
     [[nodiscard]] Message<double**>& avg_soln(int msg_dir);
     [[nodiscard]] AMRBorderData& amr(int msg_dir);
     [[nodiscard]] p3a::static_array<View<double***>, ndirs> soln() const;
+    [[nodiscard]] p3a::static_array<View<double**>, ndirs> avg_soln() const;
     [[nodiscard]] p3a::static_array<View<double****>, ndirs> amr_soln() const;
+    [[nodiscard]] p3a::static_array<View<double***>, ndirs> amr_avg_soln() const;
     [[nodiscard]] View<double****> amr_flux() const;
     [[nodiscard]] View<double****> amr_path_cons() const;
+    [[nodiscard]] View<double****> amr_noncon_avg1() const;
+    [[nodiscard]] View<double****> amr_noncon_avg2() const;
+    [[nodiscard]] View<double****> amr_noncon_flux1() const;
+    [[nodiscard]] View<double****> amr_noncon_flux2() const;
     void set_axis(int axis);
     void set_dir(int dir);
     void set_type(int type);

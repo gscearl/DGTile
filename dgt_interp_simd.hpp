@@ -28,6 +28,18 @@ p3a::device_simd<double> interp_scalar_intr(
 }
 
 [[nodiscard]] P3A_ALWAYS_INLINE P3A_HOST_DEVICE inline
+p3a::device_simd<double> interp_scalar_intr2(
+    p3a::simd_view<double***> U, Basis const& b,
+    int cell, int pt, int eq,
+    p3a::device_simd_mask<double> const& mask) {
+  p3a::device_simd<double> val = U.load(cell, eq, 0, mask) * b.phi_intr2(pt, 0);
+  for (int m = 1; m < b.nmodes; ++m) {
+    val += U.load(cell, eq, m, mask) * b.phi_intr2(pt, m);
+  }
+  return val;
+}
+
+[[nodiscard]] P3A_ALWAYS_INLINE P3A_HOST_DEVICE inline
 p3a::device_simd<double> interp_scalar_side(
     p3a::simd_view<double***> U, Basis const& b,
     int cell, int axis, int dir, int pt, int eq,
@@ -192,6 +204,19 @@ p3a::static_vector<p3a::device_simd<double>, neq> interp_vec_intr(
   p3a::static_vector<p3a::device_simd<double>, neq> val;
   for (int eq = 0; eq < neq; ++eq) {
     val[eq] = interp_scalar_intr(U, b, cell, pt, eq, mask);
+  }
+  return val;
+}
+
+template <int neq>
+[[nodiscard]] P3A_ALWAYS_INLINE P3A_HOST_DEVICE inline
+p3a::static_vector<p3a::device_simd<double>, neq> interp_vec_intr2(
+    p3a::simd_view<double***> U, Basis const& b,
+    int cell, int pt,
+    p3a::device_simd_mask<double> const& mask) {
+  p3a::static_vector<p3a::device_simd<double>, neq> val;
+  for (int eq = 0; eq < neq; ++eq) {
+    val[eq] = interp_scalar_intr2(U, b, cell, pt, eq, mask);
   }
   return val;
 }

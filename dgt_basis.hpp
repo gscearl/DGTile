@@ -17,23 +17,34 @@ struct Basis {
   int nmodes = -1;
   bool tensor = true;
   View<double*>     wt_intr;          // (intr_pt)
+  View<double*>     wt_intr2;         // (intr2_pt)
   View<double*>     wt_side;          // (side_pt)
   View<double*>     wt_fine;          // (fine_pt)
   View<double**>    pt_intr;          // (intr_pt, dim)
+  View<double**>    pt_intr2;         // (intr2_pt, dim)
   View<double****>  pt_side;          // (axis, dir, side_pt, dim)
   View<double***>   pt_child_intr;    // (which_child, intr_pt, dim)
   View<double*****> pt_child_side;    // (axis, dir, which_child, side_pt, dim)
   View<double**>    pt_fine;          // (fine_intr_pt, dim)
   View<double**>    pt_eval;          // (all_pt, dim)
+  View<double**>    pt_eval2;         // (all_pt, dim)
+  View<double****>  pt_nb_intr;       // (axis, dir, intr_pt, dim)
   View<double**>    pt_corner;        // (corner_pt, dim)
+  View<double**>    pt_corner2;       // (corner_pt, dim)
   View<double**>    phi_intr;         // (intr_pt, mode)
+  View<double**>    phi_intr2;        // (intr2_pt, mode)
   View<double***>   dphi_intr;        // (axis, intr_pt, mode)
+  View<double***>   dphi_intr2;       // (axis, intr2_pt, mode)
   View<double****>  phi_side;         // (axis, dir, side_pt, mode)
   View<double***>   phi_child_intr;   // (which_child, intr_pt, mode)
   View<double*****> phi_child_side;   // (axis, dir, which_child, side_pt, mode)
   View<double**>    phi_fine;         // (fine_pt, mode)
+  View<double***>   dphi_fine;        // (axis, fine_pt, mode)
   View<double**>    phi_eval;         // (eval_pt, mode)
+  View<double**>    phi_eval2;        // (eval_pt, mode)
+  View<double****>  phi_nb_intr;      // (axis, dir, intr_pt, mode)
   View<double**>    phi_corner;       // (corner_pt, mode)
+  View<double**>    phi_corner2;      // (corner_pt, mode)
   View<double*>     mass;             // (mode)
   void init(int dim, int p, bool tensor);
 };
@@ -44,23 +55,34 @@ struct HostBasis {
   int nmodes = -1;
   bool tensor = true;
   HView<double*>     wt_intr;         // (intr_pt)
+  HView<double*>     wt_intr2;        // (intr2_pt)
   HView<double*>     wt_side;         // (side_pt)
   HView<double*>     wt_fine;         // (fine_pt)
   HView<double**>    pt_intr;         // (intr_pt, dim)
+  HView<double**>    pt_intr2;        // (intr2_pt, dim)
   HView<double****>  pt_side;         // (axis, dir, side_pt, dim)
   HView<double***>   pt_child_intr;   // (which_child, intr_pt, dim)
   HView<double*****> pt_child_side;   // (axis, dir, which_child, side_pt, dim)
   HView<double**>    pt_fine;         // (fine_intr_pt, dim)
   HView<double**>    pt_eval;         // (all_pt, dim)
+  HView<double**>    pt_eval2;        // (all_pt, dim)
+  HView<double****>  pt_nb_intr;      // (axis, dir, intr_pt, dim)
   HView<double**>    pt_corner;       // (corner_pt, dim)
+  HView<double**>    pt_corner2;      // (corner_pt, dim)
   HView<double**>    phi_intr;        // (intr_pt, mode)
+  HView<double**>    phi_intr2;       // (intr2_pt, mode)
   HView<double***>   dphi_intr;       // (axis, intr_pt, mode)
+  HView<double***>   dphi_intr2;      // (axis, intr2_pt, mode)
   HView<double****>  phi_side;        // (axis, dir, side_pt, mode)
   HView<double***>   phi_child_intr;  // (which_child, intr_pt, mode)
   HView<double*****> phi_child_side;  // (axis, dir, which_child, side_pt, mode)
   HView<double**>    phi_fine;        // (fine_pt, mode)
+  HView<double***>   dphi_fine;       // (axis, fine_pt, mode)
   HView<double**>    phi_eval;        // (eval_pt, mode)
+  HView<double**>    phi_eval2;       // (eval_pt, mode)
+  HView<double****>  phi_nb_intr;     // (axis, dir, intr_pt, mode)
   HView<double**>    phi_corner;      // (corner_pt, mode)
+  HView<double**>    phi_corner2;     // (corner_pt, mode)
   HView<double*>     mass;            // (mode)
   void init(int dim, int p, bool tensor);
 };
@@ -97,6 +119,17 @@ int num_modes(int dim, int p, bool tensor) {
 [[nodiscard]] P3A_ALWAYS_INLINE P3A_HOST_DEVICE constexpr
 int num_pts(int dim, int p) {
   return ipow(p+1, dim);
+}
+
+[[nodiscard]] P3A_ALWAYS_INLINE P3A_HOST_DEVICE constexpr
+int num_pts2(int dim, int p) {
+  return ipow(p+2, dim);
+}
+
+[[nodiscard]] P3A_ALWAYS_INLINE P3A_HOST_DEVICE constexpr
+int num_pts_fine(int dim, int p) {
+ (void)p;
+  return ipow(4, dim);
 }
 
 [[nodiscard]] P3A_ALWAYS_INLINE P3A_HOST_DEVICE constexpr
@@ -209,6 +242,16 @@ p3a::vector3<double> get_intr_pt(BasisT const& b, int pt) {
   p3a::vector3<double> xi(0,0,0);
   for (int d = 0; d < b.dim; ++d) {
     xi[d] = b.pt_intr(pt, d);
+  }
+  return xi;
+}
+
+template <class BasisT>
+[[nodiscard]] P3A_ALWAYS_INLINE P3A_HOST_DEVICE inline
+p3a::vector3<double> get_intr2_pt(BasisT const& b, int pt) {
+  p3a::vector3<double> xi(0,0,0);
+  for (int d = 0; d < b.dim; ++d) {
+    xi[d] = b.pt_intr2(pt, d);
   }
   return xi;
 }

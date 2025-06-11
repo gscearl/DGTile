@@ -174,6 +174,16 @@ p3a::static_array<View<double***>, ndirs> Border::soln() const {
   return r;
 }
 
+p3a::static_array<View<double**>, ndirs> Border::avg_soln() const {
+  verify_border(*this);
+  p3a::static_array<View<double**>, ndirs> r;
+  int const left_send_or_recv  = (m_dir == left) ? recv : send;
+  int const right_send_or_recv = (m_dir == left) ? send : recv;
+  r[left]  = (m_avg_soln[left_send_or_recv]).val;
+  r[right] = (m_avg_soln[right_send_or_recv]).val;
+  return r;
+}
+
 p3a::static_array<View<double****>, ndirs> Border::amr_soln() const {
   verify_border(*this);
   p3a::static_array<View<double****>, ndirs> r;
@@ -181,6 +191,16 @@ p3a::static_array<View<double****>, ndirs> Border::amr_soln() const {
   int const right_send_or_recv = (m_dir == left) ? send : recv;
   r[left]   = m_amr[left_send_or_recv].soln;
   r[right]  = m_amr[right_send_or_recv].soln;
+  return r;
+}
+
+p3a::static_array<View<double***>, ndirs> Border::amr_avg_soln() const {
+  verify_border(*this);
+  p3a::static_array<View<double***>, ndirs> r;
+  int const left_send_or_recv  = (m_dir == left) ? recv : send;
+  int const right_send_or_recv = (m_dir == left) ? send : recv;
+  r[left]   = m_amr[left_send_or_recv].avg_soln;
+  r[right]  = m_amr[right_send_or_recv].avg_soln;
   return r;
 }
 
@@ -192,6 +212,21 @@ View<double****> Border::amr_path_cons() const {
   return m_amr_path_cons;
 }
 
+View<double****> Border::amr_noncon_avg1() const {
+  return m_amr_noncon_avg1;
+}
+
+View<double****> Border::amr_noncon_avg2() const {
+  return m_amr_noncon_avg2;
+}
+
+View<double****> Border::amr_noncon_flux1() const {
+  return m_amr_noncon_flux1;
+}
+
+View<double****> Border::amr_noncon_flux2() const {
+  return m_amr_noncon_flux2;
+}
 
 void Border::set_axis(int axis) {
   m_axis = axis;
@@ -257,6 +292,21 @@ static std::string amr_path_cons_name() {
   return "dgt::Border::m_amr_path_cons";
 }
 
+static std::string amr_noncon_avg1_name() {
+  return "dgt::Border::m_amr_noncon_avg1";
+}
+
+static std::string amr_noncon_avg2_name() {
+  return "dgt::Border::m_amr_noncon_avg2";
+}
+
+static std::string amr_noncon_flux1_name() {
+  return "dgt::Border::m_amr_noncon_flux1";
+}
+
+static std::string amr_noncon_flux2_name() {
+  return "dgt::Border::m_amr_noncon_flux2";
+}
 
 void Border::allocate(int nmodal_eq, int nflux_eq) {
   CALI_CXX_MARK_FUNCTION;
@@ -275,6 +325,22 @@ void Border::allocate(int nmodal_eq, int nflux_eq) {
   if (m_type == COARSE_TO_FINE) {
     m_amr_path_cons = View<double****>(
         amr_path_cons_name(), nsides, nchild, npts, nflux_eq);
+  }
+  if (m_type == COARSE_TO_FINE) {
+    m_amr_noncon_avg1 = View<double****>(
+        amr_noncon_avg1_name(), nsides, nchild, ndirs, nflux_eq);
+  }
+  if (m_type == COARSE_TO_FINE) {
+    m_amr_noncon_avg2 = View<double****>(
+        amr_noncon_avg2_name(), nsides, nchild, ndirs, nflux_eq);
+  }
+  if (m_type == COARSE_TO_FINE) {
+    m_amr_noncon_flux1 = View<double****>(
+        amr_noncon_flux1_name(), nsides, nchild, npts, nflux_eq);
+  }
+  if (m_type == COARSE_TO_FINE) {
+    m_amr_noncon_flux2 = View<double****>(
+        amr_noncon_flux2_name(), nsides, nchild, npts, nflux_eq);
   }
 
   for (int msg_dir = 0; msg_dir < ndirs; ++msg_dir) {
@@ -302,6 +368,12 @@ void Border::deallocate() {
   CALI_CXX_MARK_FUNCTION;
   m_amr_flux = View<double****>();
   m_amr_path_cons = View<double****>();
+  m_amr_noncon_avg1 = View<double****>();
+  m_amr_noncon_avg2 = View<double****>();
+  m_amr_noncon_flux1 = View<double****>();
+  m_amr_noncon_flux2 = View<double****>();
+
+
   for (int msg_dir = 0; msg_dir < ndirs; ++msg_dir) {
     m_soln[msg_dir].val = View<double***>();
     m_avg_soln[msg_dir].val = View<double**>();

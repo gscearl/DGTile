@@ -84,6 +84,11 @@ static HView<double*> get_wt_intr(int dim, int p) {
   return wts;
 }
 
+static HView<double*> get_wt_intr2(int dim, int p) {
+  (void)p;
+  return get_wt_intr(dim, p+1);
+}
+
 static HView<double*> get_wt_side(int dim, int p) {
   HView<double*> wts("", num_pts(dim-1, p));
   p3a::vector3<int> const bounds = tensor_bounds(dim-1, p);
@@ -115,6 +120,12 @@ static HView<double**> get_pt_intr(int dim, int p) {
   return pts;
 }
 
+static HView<double**> get_pt_intr2(int dim, int p) {
+  (void)p;
+  return get_pt_intr(dim, p+1);
+}
+
+
 static HView<double**> get_pt_corner(int dim) {
   int constexpr p = 1;
   HView<double**> pts("", num_corner_pts(dim), dim);
@@ -126,6 +137,18 @@ static HView<double**> get_pt_corner(int dim) {
     }
   };
   p3a::for_each(p3a::execution::seq, bounds, f);
+  return pts;
+}
+
+static HView<double**> get_pt_corner2(int dim) {
+  int const ncorner_pts = num_corner_pts(dim);
+  HView<double**> const corner_pts = get_pt_corner(dim);
+  HView<double**> pts("", ncorner_pts, dim);
+  for (int pt = 0; pt < ncorner_pts; ++pt) {
+    for (int d = 0; d < dim; ++d) {
+      pts(pt, d) = 2.0 * corner_pts(pt, d);
+    }
+  }
   return pts;
 }
 
@@ -184,7 +207,7 @@ static HView<double*****> get_pt_child_side(int dim, int p) {
           if (dim > 1) xi.x() = side_pts(axis, dir, pt, ii);
           if (dim > 2) xi.y() = side_pts(axis, dir, pt, jj);
           p3a::vector3<double> const child_xi = get_child_xi(xi, which_child);
-          pts(axis, dir, which_child, pt, axis) = side_pts(axis, dir, pt, axis); 
+          pts(axis, dir, which_child, pt, axis) = side_pts(axis, dir, pt, axis);
           if (dim > 1) pts(axis, dir, which_child, pt, ii) = child_xi.x();
           if (dim > 2) pts(axis, dir, which_child, pt, jj) = child_xi.y();
         };
@@ -219,6 +242,34 @@ static HView<double**> get_pt_eval(int dim, int p) {
           pts(eval_pt, d) = side_pts(axis, dir, pt, d);
         }
         eval_pt++;
+      }
+    }
+  }
+  return pts;
+}
+
+static HView<double**> get_pt_eval2(int dim, int p) {
+  int const neval_pts = num_eval_pts(dim, p);
+  HView<double**> const eval_pts = get_pt_eval(dim, p);
+  HView<double**> pts("", neval_pts, dim);
+  for (int pt = 0; pt < neval_pts; ++pt) {
+    for (int d = 0; d < dim; ++d) {
+      pts(pt, d) = 2.0 * eval_pts(pt, d);
+    }
+  }
+  return pts;
+}
+
+static HView<double****> get_pt_nb_intr(int dim, int p) {
+  HView<double****> pts("", dim, ndirs, num_pts(dim, p), dim);
+  HView<double**> const intr_pts = get_pt_intr(dim, p);
+  for (int axis = 0; axis < dim; ++axis) {
+    for (int dir = 0; dir < ndirs; ++dir) {
+      for (int pt = 0; pt < num_pts(dim, p); ++pt) {
+        for (int d = 0; d < dim; ++d) {
+          pts(axis, dir, pt, d) = intr_pts(pt, d);
+        }
+        pts(axis, dir, pt, axis) += get_dir_sign(dir) * 2.0;
       }
     }
   }
@@ -267,13 +318,28 @@ static HView<double**> get_phi_intr(int dim, int p, bool tensor) {
   return get_phi(dim, p, tensor, pts);
 }
 
+static HView<double**> get_phi_intr2(int dim, int p, bool tensor) {
+  HView<double**> const pts = get_pt_intr2(dim, p);
+  return get_phi(dim, p, tensor, pts);
+}
+
 static HView<double***> get_dphi_intr(int dim, int p, bool tensor) {
   HView<double**> const pts = get_pt_intr(dim, p);
   return get_dphi(dim, p, tensor, pts);
 }
 
+static HView<double***> get_dphi_intr2(int dim, int p, bool tensor) {
+  HView<double**> const pts = get_pt_intr2(dim, p);
+  return get_dphi(dim, p, tensor, pts);
+}
+
 static HView<double**> get_phi_corner(int dim, int p, bool tensor) {
   HView<double**> const pts = get_pt_corner(dim);
+  return get_phi(dim, p, tensor, pts);
+}
+
+static HView<double**> get_phi_corner2(int dim, int p, bool tensor) {
+  HView<double**> const pts = get_pt_corner2(dim);
   return get_phi(dim, p, tensor, pts);
 }
 
@@ -350,15 +416,47 @@ static HView<double**> get_phi_fine(int dim, int p, bool tensor) {
   return get_phi(dim, p, tensor, pts);
 }
 
+static HView<double***> get_dphi_fine(int dim, int p, bool tensor) {
+  HView<double**> const pts = get_pt_fine(dim, p);
+  return get_dphi(dim, p, tensor, pts);
+}
+
 static HView<double**> get_phi_eval(int dim, int p, bool tensor) {
   HView<double**> const pts = get_pt_eval(dim, p);
   return get_phi(dim, p, tensor, pts);
 }
 
-static HView<double*> get_mass(int dim, int p, bool tensor) {
-  HView<double*> const wts = get_wt_intr(dim, p);
-  HView<double**> const phi = get_phi_intr(dim, p, tensor);
+static HView<double**> get_phi_eval2(int dim, int p, bool tensor) {
+  HView<double**> const pts = get_pt_eval2(dim, p);
+  return get_phi(dim, p, tensor, pts);
+}
+
+static HView<double****> get_phi_nb_intr(int dim, int p, bool tensor) {
+  HView<double****> const pts = get_pt_nb_intr(dim, p);
   int const npts = num_pts(dim, p);
+  int const nmodes = num_modes(dim, p, tensor);
+  p3a::vector3<double> xi(0,0,0);
+  HView<double****> phi("", dim, ndirs, npts, nmodes);
+  for (int axis = 0; axis < dim; ++axis) {
+    for (int dir = 0; dir < ndirs; ++dir) {
+      for (int pt = 0; pt < npts; ++pt) {
+        for (int d = 0; d < dim; ++d) {
+          xi[d] = pts(axis, dir, pt, d);
+        }
+        auto const phi_xi = modes(dim, p, tensor, xi);
+        for (int m = 0; m < nmodes; ++m) {
+          phi(axis, dir, pt, m) = phi_xi[m];
+        }
+      }
+    }
+  }
+  return phi;
+}
+
+static HView<double*> get_mass(int dim, int p, bool tensor) {
+  HView<double*> const wts = get_wt_intr2(dim, p);
+  HView<double**> const phi = get_phi_intr2(dim, p, tensor);
+  int const npts = num_pts2(dim, p);
   int const nmodes = num_modes(dim, p, tensor);
   HView<double*> mass("", nmodes);
   for (int pt = 0; pt < npts; ++pt) {
@@ -379,23 +477,34 @@ void Basis::init(int in_dim, int in_p, bool tensor_in) {
   if (tensor) nmodes = num_tensor_modes(dim, p);
   else nmodes = num_non_tensor_modes(dim, p);
   copy(get_wt_intr(dim, p), wt_intr);
+  copy(get_wt_intr2(dim, p), wt_intr2);
   copy(get_wt_side(dim, p), wt_side);
   copy(get_wt_fine(dim, p), wt_fine);
   copy(get_pt_intr(dim, p), pt_intr);
+  copy(get_pt_intr2(dim, p), pt_intr2);
   copy(get_pt_side(dim, p), pt_side);
   copy(get_pt_child_intr(dim, p), pt_child_intr);
   copy(get_pt_child_side(dim, p), pt_child_side);
   copy(get_pt_fine(dim, p), pt_fine);
   copy(get_pt_eval(dim, p), pt_eval);
+  copy(get_pt_eval2(dim, p), pt_eval2);
+  copy(get_pt_nb_intr(dim, p), pt_nb_intr);
   copy(get_pt_corner(dim), pt_corner);
+  copy(get_pt_corner2(dim), pt_corner2);
   copy(get_phi_intr(dim, p, tensor), phi_intr);
+  copy(get_phi_intr2(dim, p, tensor), phi_intr2);
   copy(get_dphi_intr(dim, p, tensor), dphi_intr);
+  copy(get_dphi_intr2(dim, p, tensor), dphi_intr2);
   copy(get_phi_side(dim, p, tensor), phi_side);
   copy(get_phi_child_intr(dim, p, tensor), phi_child_intr);
   copy(get_phi_child_side(dim, p, tensor), phi_child_side);
   copy(get_phi_fine(dim, p, tensor), phi_fine);
+  copy(get_dphi_fine(dim, p, tensor), dphi_fine);
   copy(get_phi_eval(dim, p, tensor), phi_eval);
+  copy(get_phi_eval2(dim, p, tensor), phi_eval2);
+  copy(get_phi_nb_intr(dim, p, tensor), phi_nb_intr);
   copy(get_phi_corner(dim, p, tensor), phi_corner);
+  copy(get_phi_corner2(dim, p, tensor), phi_corner2);
   copy(get_mass(dim, p, tensor), mass);
 }
 
@@ -409,23 +518,34 @@ void HostBasis::init(int in_dim, int in_p, bool tensor_in) {
   if (tensor) nmodes = num_tensor_modes(dim, p);
   else nmodes = num_non_tensor_modes(dim, p);
   wt_intr = get_wt_intr(dim, p);
+  wt_intr2 = get_wt_intr2(dim, p);
   wt_side = get_wt_side(dim, p);
   wt_fine = get_wt_fine(dim, p);
   pt_intr = get_pt_intr(dim, p);
+  pt_intr2 = get_pt_intr2(dim, p);
   pt_side = get_pt_side(dim, p);
   pt_child_intr = get_pt_child_intr(dim, p);
   pt_child_side = get_pt_child_side(dim, p);
   pt_fine = get_pt_fine(dim, p);
   pt_eval = get_pt_eval(dim, p);
+  pt_eval2 = get_pt_eval2(dim, p);
+  pt_nb_intr = get_pt_nb_intr(dim, p);
   pt_corner = get_pt_corner(dim);
+  pt_corner2 = get_pt_corner2(dim);
   phi_intr = get_phi_intr(dim, p, tensor);
+  phi_intr2 = get_phi_intr2(dim, p, tensor);
   dphi_intr = get_dphi_intr(dim, p, tensor);
+  dphi_intr2 = get_dphi_intr2(dim, p, tensor);
   phi_side = get_phi_side(dim, p, tensor);
   phi_child_intr = get_phi_child_intr(dim, p, tensor);
   phi_child_side = get_phi_child_side(dim, p, tensor);
   phi_fine = get_phi_fine(dim, p, tensor);
+  dphi_fine = get_dphi_fine(dim, p, tensor);
   phi_eval = get_phi_eval(dim, p, tensor);
+  phi_eval2 = get_phi_eval2(dim, p, tensor);
+  phi_nb_intr = get_phi_nb_intr(dim, p, tensor);
   phi_corner = get_phi_corner(dim, p, tensor);
+  phi_corner2 = get_phi_corner2(dim, p, tensor);
   mass = get_mass(dim, p, tensor);
 }
 
